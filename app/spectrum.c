@@ -65,6 +65,12 @@ uint8_t bHold;
 KEY_t Key;
 KEY_t LastKey = KEY_NONE;
 
+uint8_t SpectrumColorMode;
+uint8_t COLOR_R;
+uint8_t COLOR_G;
+uint8_t COLOR_B;
+uint16_t COLOR_BAR;
+
 static const char StepStrings[][5] = {
 	"0.25K",
 	"1.25K",
@@ -175,7 +181,7 @@ void IncrementFreqStepIndex(void) {
 }
 
 void IncrementScanDelay(void) {
-	CurrentScanDelay = (CurrentScanDelay + 2) % 12;
+	CurrentScanDelay = (CurrentScanDelay + 2) % 13;
 	DrawLabels();
 }
 
@@ -269,6 +275,10 @@ void JumpToVFO(void) {
 	bExit = TRUE;
 }
 
+void ChangeSpectrumColor(void) {
+	SpectrumColorMode = (SpectrumColorMode + 1) % 3;
+}
+
 void DrawSpectrum(uint16_t ActiveBarColor) {
 	uint8_t BarLow;
 	uint8_t BarHigh;
@@ -288,14 +298,57 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 		BarX = 16 + (i * BarWidth);
 		Power = GetAdjustedLevel(RssiValue[i], BarLow, BarHigh, BarScale);
 		SquelchPower = GetAdjustedLevel(SquelchLevel, BarLow, BarHigh, BarScale);
+		
+		if (SpectrumColorMode > 0) {
+			if(Power == 0) {COLOR_BAR = COLOR_RGB(0,  0,  0);}
+			if(Power > 0 && Power <= 20) {
+				COLOR_R = 0;
+				COLOR_G = (Power * 4) - 1;
+				COLOR_B = (21 - Power) * 4 - 1;
+			}
+			if(Power > 20 && Power <= 40) {
+				COLOR_R = (Power - 20) * 4 - 1;
+				COLOR_G = (41 - Power) * 4 - 1;
+				COLOR_B = 0;
+			}
+			if(COLOR_R > 63) {COLOR_R = 63;}
+			if(COLOR_R < 0) {COLOR_R = 0;}
+			if(COLOR_G > 63) {COLOR_G = 63;}
+			if(COLOR_G < 0) {COLOR_G = 0;}
+			if(COLOR_B > 63) {COLOR_B = 63;}
+			if(COLOR_B < 0) {COLOR_B = 0;}
+			COLOR_BAR = COLOR_RGB(COLOR_R,  COLOR_G,  COLOR_B);
+		}
+		
 		if (Power < SquelchPower) {
-			DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
-			DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BACKGROUND);
-			DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BACKGROUND);
-		} else { 
-			DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
-			DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
-			DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BACKGROUND);
+			if (SpectrumColorMode == 1) {
+				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BACKGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BACKGROUND);
+			} else if (SpectrumColorMode == 2){
+				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BAR);
+			} else {
+				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BACKGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BACKGROUND);
+			}
+			
+		} else {
+			if (SpectrumColorMode == 1) {
+				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BACKGROUND);
+			} else if (SpectrumColorMode == 2){
+				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BAR);
+			} else {
+				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BACKGROUND);
+			}
 		} 
 	}
 
@@ -374,6 +427,7 @@ void CheckKeys(void) {
 				IncrementFreqStepIndex();
 				break;
 			case KEY_5:
+				ChangeSpectrumColor();
 				break;
 			case KEY_6:
 				ChangeSquelchLevel(TRUE);
@@ -535,13 +589,15 @@ void APP_Spectrum(void) {
 	CurrentModulation = gVfoState[gSettings.CurrentVfo].gModulationType;
 	CurrentFreqStepIndex = gSettings.FrequencyStep;
 	CurrentFreqStep = FREQUENCY_GetStep(CurrentFreqStepIndex);
-	CurrentStepCountIndex = STEPS_64;
+	CurrentStepCountIndex = STEPS_128;
 	CurrentScanDelay = 4;
 	bFilterEnabled = TRUE;
 	SquelchLevel = 0;
 	BarScale = 40;
 	BarY = 15;
 	bHold = 0;
+	
+	SpectrumColorMode = 0;
 
 	SetStepCount();
 	SetFreqMinMax(); 
