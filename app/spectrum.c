@@ -276,7 +276,7 @@ void JumpToVFO(void) {
 }
 
 void ChangeSpectrumColor(void) {
-	SpectrumColorMode = (SpectrumColorMode + 1) % 3;
+	SpectrumColorMode = (SpectrumColorMode + 1) % 4;
 }
 
 void DrawSpectrum(uint16_t ActiveBarColor) {
@@ -329,6 +329,10 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
 				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BAR);
 				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BAR);
+			} else if (SpectrumColorMode == 3){
+				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, BarScale - SquelchPower, BarWidth, COLOR_BAR);
 			} else {
 				DISPLAY_DrawRectangle1(BarX, BarY, Power, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
 				DISPLAY_DrawRectangle1(BarX, BarY + Power, SquelchPower - Power, BarWidth, COLOR_BACKGROUND);
@@ -343,6 +347,10 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 			} else if (SpectrumColorMode == 2){
 				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
 				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
+				DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BAR);
+			} else if (SpectrumColorMode == 3){
+				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, COLOR_BAR);
+				DISPLAY_DrawRectangle1(BarX, BarY + SquelchPower + 1, Power - SquelchPower, BarWidth, COLOR_BAR);
 				DISPLAY_DrawRectangle1(BarX, BarY + Power + 1, BarScale - Power, BarWidth, COLOR_BAR);
 			} else {
 				DISPLAY_DrawRectangle1(BarX, BarY, SquelchPower, BarWidth, (i == CurrentFreqIndex) ? ActiveBarColor : COLOR_FOREGROUND);
