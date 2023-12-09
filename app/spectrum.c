@@ -22,6 +22,7 @@
 #include "driver/key.h"
 #include "driver/pins.h"
 #include "driver/speaker.h"
+#include "driver/st7735s.h"
 #include "helper/helper.h"
 #include "helper/inputbox.h"
 #include "radio/channels.h"
@@ -35,8 +36,16 @@
 	#include "external/printf/printf.h"
 #endif
 
+#define WATERFALL_RIGHT_MARGIN 0
+#define WATERFALL_LEFT_MARGIN 0
+#define H_WATERFALL_WIDTH 127
+
+#define SCROLL_LEFT_MARGIN 55
+#define SCROLL_RIGHT_MARGIN 160
+
 uint32_t CurrentFreq;
 uint8_t CurrentFreqIndex;
+uint8_t CurrentFreqIndex_old;
 uint32_t FreqCenter;
 uint32_t FreqMin;
 uint32_t FreqMax;
@@ -69,6 +78,77 @@ FreqPreset CurrentBandInfo;
 uint8_t CurrentBandIndex;
 uint8_t bInBand = FALSE;
 #endif
+uint8_t DisplayMode;
+uint8_t WaterfallOffset;
+uint8_t scroll;
+
+static const uint16_t waterfall_rainbow[] = {
+    COLOR_RGB(0x00, 0x00, 0x0b), // div 4.0	COLOR_RGB(0x00,0x01,0x2d),	// Make the first few colors "bluer"
+    COLOR_RGB(0x00, 0x01, 0x0d), // div 3.8	COLOR_RGB(0x00,0x04,0x30),
+    COLOR_RGB(0x00, 0x02, 0x0e), // div 3.6	COLOR_RGB(0x00,0x07,0x33),
+    COLOR_RGB(0x00, 0x03, 0x10), // div 3.4	COLOR_RGB(0x00,0x0b,0x37),
+    COLOR_RGB(0x00, 0x05, 0x12), // div 3.2	COLOR_RGB(0x00,0x10,0x3a),
+    COLOR_RGB(0x00, 0x07, 0x14), // div 3.0	COLOR_RGB(0x00,0x14,0x3d),
+    COLOR_RGB(0x00, 0x09, 0x1b), // div 2.8	COLOR_RGB(0x00,0x1a,0x4a),
+    COLOR_RGB(0x00, 0x0c, 0x1a), // div 2.6	COLOR_RGB(0x00,0x1f,0x44),
+    COLOR_RGB(0x00, 0x0f, 0x1e), // div 2.4	COLOR_RGB(0x00,0x25,0x47),
+    COLOR_RGB(0x00, 0x14, 0x22), // div 2.2	COLOR_RGB(0x00,0x2c,0x4b),
+    COLOR_RGB(0x00, 0x1a, 0x27), // div 2.0	COLOR_RGB(0x00,0x33,0x4e),
+    COLOR_RGB(0x00, 0x20, 0x2d), // div 1.8	COLOR_RGB(0x00,0x3a,0x51),
+    COLOR_RGB(0x00, 0x29, 0x35), // div 1.6	COLOR_RGB(0x00,0x42,0x54),
+    COLOR_RGB(0x00, 0x35, 0x3f), // div 1.4	COLOR_RGB(0x00,0x4a,0x58),
+    COLOR_RGB(0x00, 0x44, 0x4c), // div 1.2	COLOR_RGB(0x00,0x52,0x5b),
+    COLOR_RGB(0x00, 0x5b, 0x5e),
+    COLOR_RGB(0x00, 0x62, 0x5f),
+    COLOR_RGB(0x01, 0x65, 0x5c),
+    COLOR_RGB(0x01, 0x68, 0x59),
+    COLOR_RGB(0x01, 0x6c, 0x55),
+    COLOR_RGB(0x01, 0x6f, 0x50),
+    COLOR_RGB(0x01, 0x72, 0x4c),
+    COLOR_RGB(0x01, 0x76, 0x46),
+    COLOR_RGB(0x01, 0x79, 0x41),
+    COLOR_RGB(0x01, 0x7c, 0x3b),
+    COLOR_RGB(0x01, 0x80, 0x35),
+    COLOR_RGB(0x02, 0x83, 0x2e),
+    COLOR_RGB(0x02, 0x87, 0x27),
+    COLOR_RGB(0x02, 0x8a, 0x1f),
+    COLOR_RGB(0x02, 0x8d, 0x18),
+    COLOR_RGB(0x02, 0x91, 0x0f),
+    COLOR_RGB(0x02, 0x94, 0x07),
+    COLOR_RGB(0x08, 0x97, 0x03),
+    COLOR_RGB(0x11, 0x9b, 0x03),
+    COLOR_RGB(0x1c, 0x9e, 0x03),
+    COLOR_RGB(0x26, 0xa1, 0x03),
+    COLOR_RGB(0x31, 0xa4, 0x03),
+    COLOR_RGB(0x3d, 0xa8, 0x03),
+    COLOR_RGB(0x49, 0xab, 0x04),
+    COLOR_RGB(0x55, 0xaf, 0x04),
+    COLOR_RGB(0x61, 0xb2, 0x04),
+    COLOR_RGB(0x6e, 0xb5, 0x04),
+    COLOR_RGB(0x7c, 0xb8, 0x04),
+    COLOR_RGB(0x8a, 0xbc, 0x05),
+    COLOR_RGB(0x98, 0xbf, 0x05),
+    COLOR_RGB(0xa6, 0xc3, 0x05),
+    COLOR_RGB(0xb5, 0xc6, 0x05),
+    COLOR_RGB(0xc5, 0xc9, 0x05),
+    COLOR_RGB(0xcc, 0xc4, 0x06),
+    COLOR_RGB(0xd0, 0xbb, 0x06),
+    COLOR_RGB(0xd3, 0xb1, 0x06),
+    COLOR_RGB(0xd7, 0xa7, 0x06),
+    COLOR_RGB(0xda, 0x9c, 0x07),
+    COLOR_RGB(0xdd, 0x91, 0x07),
+    COLOR_RGB(0xe0, 0x86, 0x07),
+    COLOR_RGB(0xe4, 0x7a, 0x07),
+    COLOR_RGB(0xe7, 0x6e, 0x08),
+    COLOR_RGB(0xeb, 0x61, 0x08),
+    COLOR_RGB(0xee, 0x54, 0x08),
+    COLOR_RGB(0xf1, 0x47, 0x08),
+    COLOR_RGB(0xf4, 0x39, 0x09),
+    COLOR_RGB(0xf8, 0x2b, 0x09),
+    COLOR_RGB(0xfb, 0x1c, 0x09),
+    COLOR_RGB(0xff, 0x0e, 0x09),
+    COLOR_RGB(0xff, 0xff, 0xff),
+};
 
 void ShiftShortStringRight(uint8_t Start, uint8_t End) {
 	for (uint8_t i = End; i > Start; i--){
@@ -82,9 +162,32 @@ void DrawCurrentFreq(uint16_t Color) {
 	Int2Ascii(CurrentFreq, 8);
 	ShiftShortStringRight(2, 6);
 	gShortString[3] = '.';
-	UI_DrawString(30, 78, gShortString, 8);
 
-	UI_DrawSmallString(98, 68, Mode[CurrentModulation], 2);
+	if (!DisplayMode) {
+		UI_DrawString(30, 78, gShortString, 8);
+
+		UI_DrawSmallString(98, 68, Mode[CurrentModulation], 2);
+	} else {
+		UI_DrawSmallString(2, 20, gShortString, 8);
+
+		UI_DrawSmallString(2, 50, Mode[CurrentModulation], 2);
+	}
+
+	gColorForeground = Color;
+	ConvertRssiToDbm(RssiValue[CurrentFreqIndex]);
+	if (!DisplayMode) {
+		UI_DrawSmallString(118, 72, gShortString, 4);
+	} else {
+		UI_DrawSmallString(2, 40, gShortString, 4);
+	}
+	
+	gColorForeground = COLOR_RED;
+	ConvertRssiToDbm(SquelchLevel);
+	if (!DisplayMode) {
+		UI_DrawSmallString(118, 60, gShortString, 4);
+	} else {
+		UI_DrawSmallString(29, 40, gShortString, 4);
+	}
 }
 
 #ifdef ENABLE_SPECTRUM_PRESETS
@@ -118,39 +221,62 @@ void DrawLabels(void) {
 	Int2Ascii(FreqMax / 10, 7);
 	ShiftShortStringRight(2, 7);
 	gShortString[3] = '.';
-	UI_DrawSmallString(112, 2, gShortString, 8);
+	if (!DisplayMode) {
+		UI_DrawSmallString(112, 2, gShortString, 8);
+	} else {
+		UI_DrawSmallString(2, 88, gShortString, 8);
+	}
 
 #ifdef ENABLE_SPECTRUM_PRESETS
-	if (bInBand) {
+	if (bInBand && !DisplayMode) {
 		UI_DrawSmallString(2, 84, CurrentBandInfo.Name, 14);
 	}
 #endif
 
-	gShortString[2] = ' ';
-	Int2Ascii(CurrentStepCount, (CurrentStepCount < 100) ? 2 : 3);
-	UI_DrawSmallString(2, 72, gShortString, 3);
+	if (!DisplayMode) {
+		gShortString[2] = ' ';
+		Int2Ascii(CurrentStepCount, (CurrentStepCount < 100) ? 2 : 3);
+		UI_DrawSmallString(2, 72, gShortString, 3);
 
-	UI_DrawSmallString(2, 60, StepStrings[CurrentFreqStepIndex], 5);
+		UI_DrawSmallString(2, 60, StepStrings[CurrentFreqStepIndex], 5);
+	} else {
+		UI_DrawSmallString(2, 72, StepStrings[CurrentFreqStepIndex], 5);
+	}
 
 	Int2Ascii(CurrentScanDelay, (CurrentScanDelay < 10) ? 1 : 2);
 	if (CurrentScanDelay < 10) {
 		gShortString[1] = gShortString[0];
 		gShortString[0] = ' ';
 	}
-	UI_DrawSmallString(146, 72, gShortString, 2);
 
-	UI_DrawSmallString(152, 60, (bFilterEnabled) ? "F" : "U", 1);
+	if (!DisplayMode) {
+		UI_DrawSmallString(146, 72, gShortString, 2);
 
-	UI_DrawSmallString(152, 48, (bNarrow) ? "N" : "W", 1);	
+		UI_DrawSmallString(152, 60, (bFilterEnabled) ? "F" : "U", 1);
 
-	UI_DrawSmallString(2, 14, (bHold) ? "H" : " ", 1);
+		UI_DrawSmallString(152, 48, (bNarrow) ? "N" : "W", 1);	
+
+		UI_DrawSmallString(2, 14, (bHold) ? "H" : " ", 1);
+	} else {
+		UI_DrawSmallString(32, 72, gShortString, 2);
+
+		UI_DrawSmallString(2, 60, (bFilterEnabled) ? "F" : "U", 1);
+
+		UI_DrawSmallString(15, 60, (bNarrow) ? "N" : "W", 1);	
+
+		UI_DrawSmallString(30, 60, (bHold) ? "H" : " ", 1);
+	}
 
 	gColorForeground = COLOR_GREY;
 
 	Int2Ascii(CurrentFreqChangeStep / 10, 5);
 	ShiftShortStringRight(0, 5);
 	gShortString[1] = '.';
-	UI_DrawSmallString(64, 2, gShortString, 6);
+	if (!DisplayMode) {
+		UI_DrawSmallString(64, 2, gShortString, 6);
+	} else {
+		UI_DrawSmallString(2, 30, gShortString, 6);
+	}
 }
 
 void SetFreqMinMax(void) {
@@ -251,6 +377,21 @@ void ChangeBandPreset(uint8_t Up) {
 }
 #endif
 
+void ChangeDisplayMode() {
+	DisplayMode ^= 1;
+	bRestartScan = TRUE;
+
+	ST7735S_Init();
+
+	if (DisplayMode) {
+		CurrentStepCountIndex = 0;
+		SetStepCount();
+		ST7735S_defineScrollArea(SCROLL_LEFT_MARGIN, SCROLL_RIGHT_MARGIN);
+	}
+	
+	DrawLabels();
+}
+
 void ToggleFilter(void) {
 	bFilterEnabled ^= 1;
 	BK4819_EnableFilter(bFilterEnabled);
@@ -348,6 +489,7 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 	Power = GetAdjustedLevel(SquelchLevel, BarLow, BarHigh, BarScale);
 	DISPLAY_DrawRectangle1(16, BarY + Power, 1, 128, COLOR_RED);
 
+/*
 	gColorForeground = ActiveBarColor;
 	ConvertRssiToDbm(RssiValue[CurrentFreqIndex]);
 	UI_DrawSmallString(118, 72, gShortString, 4);
@@ -355,11 +497,61 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 	gColorForeground = COLOR_RED;
 	ConvertRssiToDbm(SquelchLevel);
 	UI_DrawSmallString(118, 60, gShortString, 4);
+*/
+}
+
+void DrawWaterfall()
+{
+	uint8_t Low;
+	uint8_t High;
+
+	Low = RssiLow - 2;
+	if ((RssiHigh - RssiLow) < 64) {
+		High = RssiLow + 64;
+	} else {
+		High = RssiHigh + 5;
+	}
+
+	scroll++;
+	scroll %= (SCROLL_RIGHT_MARGIN - SCROLL_LEFT_MARGIN);
+
+	ST7735S_scroll(scroll);
+
+	ST7735S_SetAddrWindow((SCROLL_RIGHT_MARGIN)-scroll, 0, (SCROLL_RIGHT_MARGIN)-scroll, 127);
+
+	for (uint8_t i = 0; i < 127; i++)
+	{
+		//uint16_t wf = (waterfall_rainbow[RssiValue[i] - RssiLow - WaterfallOffset]);
+		uint16_t wf = GetAdjustedLevel(RssiValue[i], Low, High, 64);
+		wf = waterfall_rainbow[wf];
+		ST7735S_SendU16(wf); // write to screen using waterfall color from palette
+	}
+
+	ST7735S_SetPixel(54, CurrentFreqIndex_old, COLOR_BACKGROUND);
+	ST7735S_SetPixel(53, CurrentFreqIndex_old, COLOR_BACKGROUND);
+	ST7735S_SetPixel(52, CurrentFreqIndex_old, COLOR_BACKGROUND);
+
+	CurrentFreqIndex_old = CurrentFreqIndex;
+
+	ST7735S_SetPixel(54, CurrentFreqIndex, COLOR_GREY);
+	ST7735S_SetPixel(53, CurrentFreqIndex, COLOR_GREY);
+	ST7735S_SetPixel(52, CurrentFreqIndex, COLOR_GREY);
+
+/*
+	gColorForeground = COLOR_BLUE;
+	ConvertRssiToDbm(RssiValue[CurrentFreqIndex]);
+	UI_DrawSmallString(2, 40, gShortString, 4);
+	
+	gColorForeground = COLOR_RED;
+	ConvertRssiToDbm(SquelchLevel);
+	UI_DrawSmallString(25, 40, gShortString, 4);
+*/
 }
 
 void StopSpectrum(void) {
 
 	SCREEN_TurnOn();
+	ST7735S_Init();
 
 	if (gSettings.WorkMode) {
 		CHANNELS_LoadChannel(gSettings.VfoChNo[!gSettings.CurrentVfo], !gSettings.CurrentVfo);
@@ -434,6 +626,7 @@ void CheckKeys(void) {
 				DrawLabels();
 				break;
 			case KEY_8:
+				ChangeDisplayMode();
 				break;
 			case KEY_9:
 				ChangeSquelchLevel(FALSE);
@@ -501,7 +694,9 @@ void RunRX(void) {
 			return;
 		}
 		DrawCurrentFreq(COLOR_GREEN);
-		DrawSpectrum(COLOR_GREEN);
+		if (!DisplayMode){
+			DrawSpectrum(COLOR_GREEN);
+		}
 		DELAY_WaitMS(5);
 	}
 
@@ -512,9 +707,11 @@ void RunRX(void) {
 void Spectrum_Loop(void) {
 	uint32_t FreqToCheck;
 	CurrentFreqIndex = 0;
+	CurrentFreqIndex_old = 0;
 	CurrentFreq = FreqMin;
 	bResetSquelch = TRUE;
 	bRestartScan = FALSE;
+	scroll = 0;
 
 	UI_DrawStatusIcon(139, ICON_BATTERY, true, COLOR_FOREGROUND);
 	UI_DrawBattery(false);
@@ -571,7 +768,12 @@ void Spectrum_Loop(void) {
 		}
 
 		DrawCurrentFreq(COLOR_BLUE);
-		DrawSpectrum(COLOR_BLUE);
+
+		if (!DisplayMode) {
+			DrawSpectrum(COLOR_BLUE);
+		} else {
+			DrawWaterfall();
+		}
 	}
 }
 
@@ -594,6 +796,8 @@ void APP_Spectrum(void) {
 	BarScale = 40;
 	BarY = 15;
 	bHold = 0;
+	DisplayMode = 0;
+	WaterfallOffset = 0;
 
 	SetStepCount();
 	SetFreqMinMax(); 
