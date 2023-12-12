@@ -82,6 +82,7 @@ uint8_t DisplayMode;
 uint8_t WaterfallOffset;
 uint8_t scroll;
 
+/*
 static const uint16_t waterfall_rainbow[] = {
     COLOR_RGB(0x00, 0x00, 0x0b), // div 4.0	COLOR_RGB(0x00,0x01,0x2d),	// Make the first few colors "bluer"
     COLOR_RGB(0x00, 0x01, 0x0d), // div 3.8	COLOR_RGB(0x00,0x04,0x30),
@@ -149,6 +150,7 @@ static const uint16_t waterfall_rainbow[] = {
     COLOR_RGB(0xff, 0x0e, 0x09),
     COLOR_RGB(0xff, 0xff, 0xff),
 };
+*/
 
 void ShiftShortStringRight(uint8_t Start, uint8_t End) {
 	for (uint8_t i = End; i > Start; i--){
@@ -500,16 +502,52 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 */
 }
 
+uint16_t MapColor(uint16_t Level){
+	const uint8_t Blue_R = 0;
+    const uint8_t Blue_G = 0;
+    const uint8_t Blue_B = 255;
+    
+    const uint8_t Green_R = 0;
+    const uint8_t Green_G = 149;
+    const uint8_t Green_B = 0;
+    
+    const uint8_t Red_R = 255;
+    const uint8_t Red_G = 0;
+    const uint8_t Red_B = 0;
+    
+    uint8_t R;
+    uint8_t G;
+    uint8_t B;
+    
+    if (Level > 100) {
+		R = 255;
+        G = 255;
+        B = 255;
+	} else if (Level <= 50) {
+		Level = Level << 1;
+        R = Blue_R + ((Green_R - Blue_R) * Level / 100);
+        G = Blue_G + ((Green_G - Blue_G) * Level / 100);
+        B = Blue_B + ((Green_B - Blue_B) * Level / 100);
+    } else {
+		Level = (Level - 50) << 1;
+        R = Green_R + ((Red_R - Green_R) * Level / 100);
+        G = Green_G + ((Red_G - Green_G) * Level / 100);
+        B = Green_B + ((Red_B - Green_B) * Level / 100);
+    }
+
+	return COLOR_RGB(R, G, B);
+}
+
 void DrawWaterfall()
 {
-	uint8_t Low;
-	uint8_t High;
+	//uint16_t Low;
+	uint16_t High;
 
-	Low = RssiLow - 2;
-	if ((RssiHigh - RssiLow) < 64) {
-		High = RssiLow + 64;
+	//Low = RssiLow - 2;
+	if ((RssiHigh - RssiLow) < 100) {
+		High = RssiLow + 100;
 	} else {
-		High = RssiHigh + 5;
+		High = RssiHigh + 0;
 	}
 
 	scroll++;
@@ -522,8 +560,16 @@ void DrawWaterfall()
 	for (uint8_t i = 0; i < 127; i++)
 	{
 		//uint16_t wf = (waterfall_rainbow[RssiValue[i] - RssiLow - WaterfallOffset]);
-		uint16_t wf = GetAdjustedLevel(RssiValue[i], Low, High, 64);
-		wf = waterfall_rainbow[wf];
+
+		//uint16_t wf = GetAdjustedLevel(RssiValue[i], Low, High, 64);
+		//wf = waterfall_rainbow[wf];
+		
+		uint16_t wf = GetAdjustedLevel(RssiValue[i], RssiLow, High, 100);
+		wf = MapColor(wf);
+
+		//uint16_t wf = MapColor(RssiValue[i] - RssiLow);
+
+		
 		ST7735S_SendU16(wf); // write to screen using waterfall color from palette
 	}
 
