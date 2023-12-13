@@ -82,76 +82,6 @@ uint8_t DisplayMode;
 uint8_t WaterfallOffset;
 uint8_t scroll;
 
-/*
-static const uint16_t waterfall_rainbow[] = {
-    COLOR_RGB(0x00, 0x00, 0x0b), // div 4.0	COLOR_RGB(0x00,0x01,0x2d),	// Make the first few colors "bluer"
-    COLOR_RGB(0x00, 0x01, 0x0d), // div 3.8	COLOR_RGB(0x00,0x04,0x30),
-    COLOR_RGB(0x00, 0x02, 0x0e), // div 3.6	COLOR_RGB(0x00,0x07,0x33),
-    COLOR_RGB(0x00, 0x03, 0x10), // div 3.4	COLOR_RGB(0x00,0x0b,0x37),
-    COLOR_RGB(0x00, 0x05, 0x12), // div 3.2	COLOR_RGB(0x00,0x10,0x3a),
-    COLOR_RGB(0x00, 0x07, 0x14), // div 3.0	COLOR_RGB(0x00,0x14,0x3d),
-    COLOR_RGB(0x00, 0x09, 0x1b), // div 2.8	COLOR_RGB(0x00,0x1a,0x4a),
-    COLOR_RGB(0x00, 0x0c, 0x1a), // div 2.6	COLOR_RGB(0x00,0x1f,0x44),
-    COLOR_RGB(0x00, 0x0f, 0x1e), // div 2.4	COLOR_RGB(0x00,0x25,0x47),
-    COLOR_RGB(0x00, 0x14, 0x22), // div 2.2	COLOR_RGB(0x00,0x2c,0x4b),
-    COLOR_RGB(0x00, 0x1a, 0x27), // div 2.0	COLOR_RGB(0x00,0x33,0x4e),
-    COLOR_RGB(0x00, 0x20, 0x2d), // div 1.8	COLOR_RGB(0x00,0x3a,0x51),
-    COLOR_RGB(0x00, 0x29, 0x35), // div 1.6	COLOR_RGB(0x00,0x42,0x54),
-    COLOR_RGB(0x00, 0x35, 0x3f), // div 1.4	COLOR_RGB(0x00,0x4a,0x58),
-    COLOR_RGB(0x00, 0x44, 0x4c), // div 1.2	COLOR_RGB(0x00,0x52,0x5b),
-    COLOR_RGB(0x00, 0x5b, 0x5e),
-    COLOR_RGB(0x00, 0x62, 0x5f),
-    COLOR_RGB(0x01, 0x65, 0x5c),
-    COLOR_RGB(0x01, 0x68, 0x59),
-    COLOR_RGB(0x01, 0x6c, 0x55),
-    COLOR_RGB(0x01, 0x6f, 0x50),
-    COLOR_RGB(0x01, 0x72, 0x4c),
-    COLOR_RGB(0x01, 0x76, 0x46),
-    COLOR_RGB(0x01, 0x79, 0x41),
-    COLOR_RGB(0x01, 0x7c, 0x3b),
-    COLOR_RGB(0x01, 0x80, 0x35),
-    COLOR_RGB(0x02, 0x83, 0x2e),
-    COLOR_RGB(0x02, 0x87, 0x27),
-    COLOR_RGB(0x02, 0x8a, 0x1f),
-    COLOR_RGB(0x02, 0x8d, 0x18),
-    COLOR_RGB(0x02, 0x91, 0x0f),
-    COLOR_RGB(0x02, 0x94, 0x07),
-    COLOR_RGB(0x08, 0x97, 0x03),
-    COLOR_RGB(0x11, 0x9b, 0x03),
-    COLOR_RGB(0x1c, 0x9e, 0x03),
-    COLOR_RGB(0x26, 0xa1, 0x03),
-    COLOR_RGB(0x31, 0xa4, 0x03),
-    COLOR_RGB(0x3d, 0xa8, 0x03),
-    COLOR_RGB(0x49, 0xab, 0x04),
-    COLOR_RGB(0x55, 0xaf, 0x04),
-    COLOR_RGB(0x61, 0xb2, 0x04),
-    COLOR_RGB(0x6e, 0xb5, 0x04),
-    COLOR_RGB(0x7c, 0xb8, 0x04),
-    COLOR_RGB(0x8a, 0xbc, 0x05),
-    COLOR_RGB(0x98, 0xbf, 0x05),
-    COLOR_RGB(0xa6, 0xc3, 0x05),
-    COLOR_RGB(0xb5, 0xc6, 0x05),
-    COLOR_RGB(0xc5, 0xc9, 0x05),
-    COLOR_RGB(0xcc, 0xc4, 0x06),
-    COLOR_RGB(0xd0, 0xbb, 0x06),
-    COLOR_RGB(0xd3, 0xb1, 0x06),
-    COLOR_RGB(0xd7, 0xa7, 0x06),
-    COLOR_RGB(0xda, 0x9c, 0x07),
-    COLOR_RGB(0xdd, 0x91, 0x07),
-    COLOR_RGB(0xe0, 0x86, 0x07),
-    COLOR_RGB(0xe4, 0x7a, 0x07),
-    COLOR_RGB(0xe7, 0x6e, 0x08),
-    COLOR_RGB(0xeb, 0x61, 0x08),
-    COLOR_RGB(0xee, 0x54, 0x08),
-    COLOR_RGB(0xf1, 0x47, 0x08),
-    COLOR_RGB(0xf4, 0x39, 0x09),
-    COLOR_RGB(0xf8, 0x2b, 0x09),
-    COLOR_RGB(0xfb, 0x1c, 0x09),
-    COLOR_RGB(0xff, 0x0e, 0x09),
-    COLOR_RGB(0xff, 0xff, 0xff),
-};
-*/
-
 void ShiftShortStringRight(uint8_t Start, uint8_t End) {
 	for (uint8_t i = End; i > Start; i--){
 		gShortString[i] = gShortString[i-1];
@@ -490,20 +420,10 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 	//Squelch Line
 	Power = GetAdjustedLevel(SquelchLevel, BarLow, BarHigh, BarScale);
 	DISPLAY_DrawRectangle1(16, BarY + Power, 1, 128, COLOR_RED);
-
-/*
-	gColorForeground = ActiveBarColor;
-	ConvertRssiToDbm(RssiValue[CurrentFreqIndex]);
-	UI_DrawSmallString(118, 72, gShortString, 4);
-
-	gColorForeground = COLOR_RED;
-	ConvertRssiToDbm(SquelchLevel);
-	UI_DrawSmallString(118, 60, gShortString, 4);
-*/
 }
 
 uint16_t MapColor(uint16_t Level){
-	const uint8_t Blue_R = 0;
+	//const uint8_t Blue_R = 0;
     const uint8_t Blue_G = 0;
     const uint8_t Blue_B = 255;
     
@@ -513,26 +433,28 @@ uint16_t MapColor(uint16_t Level){
     
     const uint8_t Red_R = 255;
     const uint8_t Red_G = 0;
-    const uint8_t Red_B = 0;
+    //const uint8_t Red_B = 0;
     
-    uint8_t R;
-    uint8_t G;
-    uint8_t B;
+    uint8_t R, G, B;
     
     if (Level > 100) {
 		R = 255;
         G = 255;
         B = 255;
+	} else if (Level <= 20) {
+		R = 0;
+		G = Level;
+		B = Blue_B - (Level << 1);
 	} else if (Level <= 50) {
 		Level = Level << 1;
-        R = Blue_R + ((Green_R - Blue_R) * Level / 100);
+        R = 0; // Blue_R + ((Green_R - Blue_R) * Level / 100);
         G = Blue_G + ((Green_G - Blue_G) * Level / 100);
         B = Blue_B + ((Green_B - Blue_B) * Level / 100);
     } else {
 		Level = (Level - 50) << 1;
         R = Green_R + ((Red_R - Green_R) * Level / 100);
         G = Green_G + ((Red_G - Green_G) * Level / 100);
-        B = Green_B + ((Red_B - Green_B) * Level / 100);
+        B = 0; // Green_B + ((Red_B - Green_B) * Level / 100);
     }
 
 	return COLOR_RGB(R, G, B);
@@ -540,14 +462,12 @@ uint16_t MapColor(uint16_t Level){
 
 void DrawWaterfall()
 {
-	//uint16_t Low;
 	uint16_t High;
 
-	//Low = RssiLow - 2;
-	if ((RssiHigh - RssiLow) < 100) {
-		High = RssiLow + 100;
+	if ((RssiHigh - RssiLow) < 60) {
+		High = RssiLow + 60;
 	} else {
-		High = RssiHigh + 0;
+		High = RssiHigh;
 	}
 
 	scroll++;
@@ -558,18 +478,12 @@ void DrawWaterfall()
 	ST7735S_SetAddrWindow((SCROLL_RIGHT_MARGIN)-scroll, 0, (SCROLL_RIGHT_MARGIN)-scroll, 127);
 
 	for (uint8_t i = 0; i < 127; i++)
-	{
-		//uint16_t wf = (waterfall_rainbow[RssiValue[i] - RssiLow - WaterfallOffset]);
-
-		//uint16_t wf = GetAdjustedLevel(RssiValue[i], Low, High, 64);
-		//wf = waterfall_rainbow[wf];
-		
+	{		
 		uint16_t wf = GetAdjustedLevel(RssiValue[i], RssiLow, High, 100);
 		wf = MapColor(wf);
 
 		//uint16_t wf = MapColor(RssiValue[i] - RssiLow);
 
-		
 		ST7735S_SendU16(wf); // write to screen using waterfall color from palette
 	}
 
@@ -582,16 +496,6 @@ void DrawWaterfall()
 	ST7735S_SetPixel(54, CurrentFreqIndex, COLOR_GREY);
 	ST7735S_SetPixel(53, CurrentFreqIndex, COLOR_GREY);
 	ST7735S_SetPixel(52, CurrentFreqIndex, COLOR_GREY);
-
-/*
-	gColorForeground = COLOR_BLUE;
-	ConvertRssiToDbm(RssiValue[CurrentFreqIndex]);
-	UI_DrawSmallString(2, 40, gShortString, 4);
-	
-	gColorForeground = COLOR_RED;
-	ConvertRssiToDbm(SquelchLevel);
-	UI_DrawSmallString(25, 40, gShortString, 4);
-*/
 }
 
 void StopSpectrum(void) {
