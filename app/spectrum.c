@@ -56,7 +56,7 @@ uint32_t CurrentFreqChangeStep;
 uint8_t CurrentStepCountIndex;
 uint8_t CurrentStepCount;
 uint16_t CurrentScanDelay;
-uint16_t RssiValue[128] = {0};
+uint16_t RssiValue[160] = {0};
 uint16_t SquelchLevel;
 uint8_t bExit;
 uint8_t bRXMode;
@@ -182,11 +182,11 @@ void DrawLabels(void) {
 	}
 
 	if (!DisplayMode) {
-		UI_DrawSmallString(146, 72, gShortString, 2);
+		UI_DrawSmallString(146, 84, gShortString, 2);
 
-		UI_DrawSmallString(152, 60, (bFilterEnabled) ? "F" : "U", 1);
+		UI_DrawSmallString(152, 72, (bFilterEnabled) ? "F" : "U", 1);
 
-		UI_DrawSmallString(152, 48, (bNarrow) ? "N" : "W", 1);	
+		UI_DrawSmallString(152, 60, (bNarrow) ? "N" : "W", 1);	
 
 		UI_DrawSmallString(2, 14, (bHold) ? "H" : " ", 1);
 	} else {
@@ -224,8 +224,12 @@ void SetFreqMinMax(void) {
 }
 
 void SetStepCount(void) {
-	CurrentStepCount = 128 >> CurrentStepCountIndex;
-	BarWidth = 128 / CurrentStepCount;
+	if (!DisplayMode) {
+		CurrentStepCount = 160 >> CurrentStepCountIndex;	
+		BarWidth = 160 / CurrentStepCount;
+	} else {
+		CurrentStepCount = 128 >> CurrentStepCountIndex;
+	}
 }
 
 void IncrementStepIndex(void) {
@@ -309,15 +313,16 @@ void ChangeBandPreset(uint8_t Up) {
 }
 #endif
 
-void ChangeDisplayMode() {
+void ChangeDisplayMode(void) {
 	DisplayMode ^= 1;
 	bRestartScan = TRUE;
 
 	ST7735S_Init();
 
+	CurrentStepCountIndex = 0;
+	SetStepCount();
+	SetFreqMinMax();
 	if (DisplayMode) {
-		CurrentStepCountIndex = 0;
-		SetStepCount();
 		ST7735S_defineScrollArea(SCROLL_LEFT_MARGIN, SCROLL_RIGHT_MARGIN);
 	}
 	
@@ -403,7 +408,7 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 
 	//Bars
 	for (uint8_t i = 0; i < CurrentStepCount; i++) {
-		BarX = 16 + (i * BarWidth);
+		BarX = (i * BarWidth);
 		Power = GetAdjustedLevel(RssiValue[i], BarLow, BarHigh, BarScale);
 		SquelchPower = GetAdjustedLevel(SquelchLevel, BarLow, BarHigh, BarScale);
 		if (Power < SquelchPower) {
@@ -419,7 +424,7 @@ void DrawSpectrum(uint16_t ActiveBarColor) {
 
 	//Squelch Line
 	Power = GetAdjustedLevel(SquelchLevel, BarLow, BarHigh, BarScale);
-	DISPLAY_DrawRectangle1(16, BarY + Power, 1, 128, COLOR_RED);
+	DISPLAY_DrawRectangle1(0, BarY + Power, 1, 160, COLOR_RED);
 }
 
 uint16_t MapColor(uint16_t Level){
@@ -663,8 +668,8 @@ void Spectrum_Loop(void) {
 	bRestartScan = FALSE;
 	scroll = 0;
 
-	UI_DrawStatusIcon(139, ICON_BATTERY, true, COLOR_FOREGROUND);
-	UI_DrawBattery(false);
+	//UI_DrawStatusIcon(139, ICON_BATTERY, true, COLOR_FOREGROUND);
+	//UI_DrawBattery(false);
 
 	DrawLabels();
 
